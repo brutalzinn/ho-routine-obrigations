@@ -20,7 +20,6 @@ type ObrigationStartRequest struct {
 }
 
 type ObrigationQRCodeRequest struct {
-	Id    string `json:"id"`
 	Value string `json:"value"`
 }
 
@@ -96,21 +95,7 @@ func main() {
 			c.SendStatus(400)
 			return
 		}
-		found := false
-		for _, obrigation := range obrigations {
-			if obrigation.Id == requestBody.Id {
-				found = true
-			}
-		}
-		if !found {
-			c.Status(400)
-			c.JSON(fiber.Map{
-				"message": "obrigation not found",
-			})
-			return
-		}
 		queue := ObrigationQueuePending{
-			Id:    requestBody.Id,
 			Value: requestBody.Value,
 		}
 		obrigationsQueue <- queue
