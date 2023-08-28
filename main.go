@@ -48,6 +48,7 @@ func ReadObrigations() ([]Obrigation, error) {
 }
 func main() {
 	obrigations, err := ReadObrigations()
+	var obrigationPending ObrigationQueuePending
 	if err != nil {
 		log.Println("failed to read obrigations..")
 		return
@@ -95,6 +96,12 @@ func main() {
 			c.SendStatus(400)
 			return
 		}
+		if obrigationPending.Value != requestBody.Value {
+			c.JSON(fiber.Map{
+				"message": "no any obrigations with this qr code",
+			})
+			return
+		}
 		queue := ObrigationQueuePending{
 			Value: requestBody.Value,
 		}
@@ -103,7 +110,30 @@ func main() {
 			obrigationsQueue <- queue
 		}()
 		c.SendStatus(200)
-		return
+	})
+
+	app.Post("/obrigation/start", func(c *fiber.Ctx) {
+		requestBody := new(ObrigationStartRequest)
+		if err := c.BodyParser(requestBody); err != nil {
+			c.SendStatus(400)
+			return
+		}
+		found := false
+		for _, obrigation := range obrigations {
+			if obrigation.Id == requestBody.Id {
+				found = true
+			}
+		}
+		if !found {
+			log.Println("Obrigation not found")
+			c.SendStatus(400)
+			return
+		}
+		obrigationPending = ObrigationQueuePending{
+			Id: requestBody.Id,
+		}
+		log.Println("Obrigation pending set to", obrigationPending)
+		c.SendStatus(200)
 	})
 
 	app.Get("/healthcheck", func(c *fiber.Ctx) {
