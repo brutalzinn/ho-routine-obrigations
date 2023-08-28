@@ -99,7 +99,9 @@ func main() {
 			Value: requestBody.Value,
 		}
 		log.Println("Added obrigation to queue")
-		obrigationsQueue <- queue
+		go func() {
+			obrigationsQueue <- queue
+		}()
 		c.SendStatus(200)
 		return
 	})
