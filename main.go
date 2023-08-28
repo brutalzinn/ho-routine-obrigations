@@ -98,12 +98,14 @@ func main() {
 		queue := ObrigationQueuePending{
 			Value: requestBody.Value,
 		}
+		log.Println("Added obrigation to queue")
 		obrigationsQueue <- queue
-		c.SendStatus(201)
+		c.SendStatus(200)
 		return
 	})
 
 	app.Get("/healthcheck", func(c *fiber.Ctx) {
+		log.Println("This is just a healthcheck :)")
 		c.SendStatus(200)
 	})
 
