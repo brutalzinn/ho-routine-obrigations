@@ -1,12 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
-	"os"
 	"time"
 
+	"github.com/brutalzinn/flutter-water-progress/firebase"
+	"github.com/brutalzinn/flutter-water-progress/obrigation"
 	"github.com/gofiber/fiber"
 	"github.com/gofiber/websocket"
 )
@@ -16,46 +15,30 @@ const (
 )
 
 type ObrigationStartRequest struct {
-	Id string `json:"id"`
+	Id     string `json:"id"`
+	Device string `json:"firebase_token"`
 }
 
 type ObrigationQRCodeRequest struct {
-	Value string `json:"value"`
+	Value  string `json:"value"`
+	Device string `json:"firebase_token"`
 }
 
-type Obrigation struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	QrCode    string `json:"qr_code"`
-	Mandatory bool   `json:"mandatory"`
-}
 type ObrigationQueuePending struct {
-	Id    string
-	Value string
+	Id     string
+	Value  string
+	Device string `json:"firebase_token"`
 }
 
-func ReadObrigations() ([]Obrigation, error) {
-	jsonFile, err := os.Open(OBRIGATIONS_FILE)
-	if err != nil {
-		log.Printf("obrigations file not found")
-	}
-	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	var obrigations []Obrigation
-	err = json.Unmarshal(byteValue, &obrigations)
-	return obrigations, err
-
-}
 func main() {
-	obrigations, err := ReadObrigations()
-	var obrigationPending ObrigationQueuePending
+	obrigations, err := obrigation.ReadObrigations()
+	var obrigationPending obrigation.Obrigation
 	if err != nil {
 		log.Println("failed to read obrigations..")
 		return
 	}
 	obrigationsQueue := make(chan ObrigationQueuePending)
 	app := fiber.New()
-
 	app.Get("/:obrigationId", websocket.New(func(c *websocket.Conn) {
 		obrigationId := c.Params("obrigationId")
 		for {
@@ -68,6 +51,7 @@ func main() {
 					for _, obrigation := range obrigations {
 						if obrigation.QrCode == item.Value {
 							found = true
+							break
 						}
 					}
 					if !found {
@@ -84,6 +68,11 @@ func main() {
 						"message":   "OK",
 						"qr_code":   item.Value,
 					})
+					notify := firebase.New(
+						item.Device,
+						"CONFIRMATION APPROVED",
+						"You can close this application for now..")
+					notify.Send()
 					log.Println("Correct QR CODE")
 				}
 			}()
@@ -96,7 +85,7 @@ func main() {
 			c.SendStatus(400)
 			return
 		}
-		if obrigationPending.Value != requestBody.Value {
+		if obrigationPending.QrCode != requestBody.Value {
 			c.JSON(fiber.Map{
 				"message": "no any obrigations with this qr code",
 			})
@@ -121,7 +110,9 @@ func main() {
 		found := false
 		for _, obrigation := range obrigations {
 			if obrigation.Id == requestBody.Id {
+				obrigationPending = obrigation
 				found = true
+				break
 			}
 		}
 		if !found {
@@ -129,9 +120,13 @@ func main() {
 			c.SendStatus(400)
 			return
 		}
-		obrigationPending = ObrigationQueuePending{
-			Id: requestBody.Id,
-		}
+		go func() {
+			notify := firebase.New(
+				requestBody.Device,
+				"REQUEST FOR CONFIRMATION IS PENDING + "+obrigationPending.Name,
+				"Tap this notification when you are ready.")
+			notify.Send()
+		}()
 		log.Println("Obrigation pending set to", obrigationPending)
 		c.SendStatus(200)
 	})
