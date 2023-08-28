@@ -1,0 +1,14 @@
+[
+    {
+    "id":"almoco",
+    "name":"Almoço",
+    "qrcode":"almoco-qr-code",
+    "mandatory": true
+    },
+    {
+    "id":"medicine",
+    "name":"Medicine",
+    "qrcode":"medicine-qr-code",
+    "mandatory": true
+    }
+]

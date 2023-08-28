@@ -1,0 +1,16 @@
+# //TODO: show the docker compose to Daniel.
+
+version: '3.8'
+
+services:
+    # At this moment, we dont need a docker compose mapping the dockerfile. but we need a docker-compose to dev settings..
+    app:
+        container_name: web-socket-tester
+        build:
+            context: .
+        ports:
+            - 8080:80
+        volumes:
+            - ./:/app/
+        restart: unless-stopped
+        tty: true
