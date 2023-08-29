@@ -3,11 +3,14 @@ package obrigation
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+var db *sql.DB
 
 type Obrigation struct {
 	Id        string    `db:"id"`
@@ -18,14 +21,23 @@ type Obrigation struct {
 	UpdateAt  time.Time `db:"update_at"`
 }
 
+func Connect() error {
+	var err error
+	db, err = sql.Open("mysql", os.Getenv("DB_CONFIG"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	pingErr := db.Ping()
+	if pingErr != nil {
+		log.Fatal(pingErr)
+	}
+	fmt.Println("Connected!")
+	return err
+}
+
 func ReadObrigations() ([]Obrigation, error) {
 	var obrigations []Obrigation
-	db, err := sql.Open("mysql", os.Getenv("DB_CONFIG"))
-	if err != nil {
-		fmt.Print(err)
-	}
-	defer db.Close()
-	rows, err := db.Query("SELECT * FROM Obrigations")
+	rows, err := db.Query("SELECT id, name, mandatory, qr_code FROM Obrigations")
 	if err != nil {
 		fmt.Print(err)
 	}

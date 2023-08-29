@@ -1,5 +1,5 @@
 CREATE TABLE Obrigations (
-    `id` INT NOT NULL AUTO_INCREMENT, 
+    `id` BINARY(16) DEFAULT UUID(),
     `name` varchar(100) NOT NULL,
     `mandatory` BOOLEAN default(false),
     `qr_code` varchar(100) NOT NULL,
@@ -7,3 +7,6 @@ CREATE TABLE Obrigations (
   	`update_at` TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
   	PRIMARY KEY(id)
 )
+
+INSERT INTO Obrigations (name,mandatory,qr_code) values ("cozinha", true, "hora-do-almoco")
+INSERT INTO Obrigations (name,mandatory,qr_code) values ("sala", true, "hora-da-pausa")
