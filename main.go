@@ -32,14 +32,14 @@ type ObrigationQueuePending struct {
 
 func main() {
 	var obrigationPending *obrigation.Obrigation
+	obrigationsQueue := make(chan ObrigationQueuePending)
+	app := fiber.New()
 	obrigation.Connect()
 	obrigations, err := obrigation.ReadObrigations()
 	if err != nil {
 		log.Println("failed to read obrigations..")
 		return
 	}
-	obrigationsQueue := make(chan ObrigationQueuePending)
-	app := fiber.New()
 	///HOME ASSISTANT
 	haRoutes := app.Group("/ho", middlewares.ApiKeyMiddleware())
 	{
@@ -86,7 +86,7 @@ func main() {
 
 		haObrigations := haRoutes.Group("/obrigations")
 		{
-			haObrigations.Post("/request", func(c *fiber.Ctx) {
+			haObrigations.Post("/", func(c *fiber.Ctx) {
 				requestBody := new(ObrigationStartRequest)
 				if err := c.BodyParser(requestBody); err != nil {
 					c.SendStatus(400)
@@ -131,25 +131,25 @@ func main() {
 	//mobile routes
 	mobileRoutes := app.Group("/mobile", middlewares.ApiKeyMiddleware())
 	{
-		mobileRoutes.Get("/pending", func(c *fiber.Ctx) {
-			if obrigationPending != nil {
-				c.JSON(obrigationPending)
-				return
-			}
-			c.SendStatus(fiber.StatusNoContent)
-		})
-
 		mobileObrigations := mobileRoutes.Group("/obrigation")
 		{
 			mobileObrigations.Post("/", func(c *fiber.Ctx) {
 				requestBody := new(ObrigationQRCodeRequest)
 				if err := c.BodyParser(requestBody); err != nil {
-					c.SendStatus(400)
+					c.SendStatus(fiber.StatusBadRequest)
+					return
+				}
+				if obrigationPending == nil {
+					c.JSON(fiber.Map{
+						"confirmated": false,
+						"message":     "No any obrigations pending at this moment.",
+					})
 					return
 				}
 				if obrigationPending.QrCode != requestBody.Value {
 					c.JSON(fiber.Map{
-						"message": "no any obrigations with this qr code",
+						"confirmated": false,
+						"message":     "Obrigation not foundß",
 					})
 					return
 				}
@@ -161,9 +161,22 @@ func main() {
 				go func() {
 					obrigationsQueue <- queue
 				}()
-				c.SendStatus(fiber.StatusOK)
+				c.Status(fiber.StatusCreated)
+				c.JSON(fiber.Map{
+					"confirmated": true,
+					"message":     "Added to HO processing feedback.",
+				})
+			})
+
+			mobileObrigations.Get("/", func(c *fiber.Ctx) {
+				if obrigationPending != nil {
+					c.JSON(obrigationPending)
+					return
+				}
+				c.SendStatus(fiber.StatusNoContent)
 			})
 		}
+
 	}
 	///GET THE QR CODES TO PRINT
 	app.Get("/qrcode", func(c *fiber.Ctx) {
