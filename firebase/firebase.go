@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-var serverKey = os.Getenv("API_KEY")
+var serverKey = os.Getenv("FIREBASE_API_KEY")
 
 type FCMNotification struct {
 	To           string              `json:"to"`

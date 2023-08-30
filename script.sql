@@ -1,5 +1,5 @@
 CREATE TABLE Obrigations (
-    `id` BINARY(16) DEFAULT UUID(),
+    `id` INT NOT NULL AUTO_INCREMENT, 
     `name` varchar(100) NOT NULL,
     `mandatory` BOOLEAN default(false),
     `qr_code` varchar(100) NOT NULL,
@@ -8,5 +8,7 @@ CREATE TABLE Obrigations (
   	PRIMARY KEY(id)
 )
 
-INSERT INTO Obrigations (name,mandatory,qr_code) values ("cozinha", true, "hora-do-almoco")
-INSERT INTO Obrigations (name,mandatory,qr_code) values ("sala", true, "hora-da-pausa")
+INSERT INTO test.Obrigations (name,mandatory,qr_code) values ("cozinha", true, "hora-do-almoco")
+
+
+INSERT INTO test.Obrigations (name,mandatory,qr_code) values ("sala", true, "hora-da-pausa")
