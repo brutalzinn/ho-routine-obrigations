@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/brutalzinn/ho-routine-obrigations/firebase"
+	"github.com/brutalzinn/ho-routine-obrigations/middlewares"
 	"github.com/brutalzinn/ho-routine-obrigations/obrigation"
 	"github.com/brutalzinn/ho-routine-obrigations/util"
 	"github.com/gofiber/fiber"
@@ -30,28 +30,18 @@ type ObrigationQueuePending struct {
 	Device string `json:"firebase_token"`
 }
 
-var API_KEY = os.Getenv("API_KEY")
-
 func main() {
+	var obrigationPending *obrigation.Obrigation
 	obrigation.Connect()
 	obrigations, err := obrigation.ReadObrigations()
-	var obrigationPending obrigation.Obrigation
 	if err != nil {
 		log.Println("failed to read obrigations..")
 		return
 	}
 	obrigationsQueue := make(chan ObrigationQueuePending)
 	app := fiber.New()
-	app.Use(func(c *fiber.Ctx) {
-		apiKey := c.Get("x-api-key")
-		if apiKey != API_KEY {
-			c.SendStatus(fiber.StatusUnauthorized)
-			return
-		}
-		c.Next()
-	})
 	///HOME ASSISTANT
-	haRoutes := app.Group("/ho")
+	haRoutes := app.Group("/ho", middlewares.ApiKeyMiddleware())
 	{
 		haRoutes.Get("/", websocket.New(func(c *websocket.Conn) {
 			for {
@@ -86,6 +76,7 @@ func main() {
 							"CONFIRMATION APPROVED",
 							"You can close this application for now..")
 						notify.Send()
+						obrigationPending = nil
 						log.Println("Correct QR CODE")
 					}
 				}()
@@ -93,62 +84,86 @@ func main() {
 			}
 		}))
 
-		haRoutes.Post("/obrigation/start", func(c *fiber.Ctx) {
-			requestBody := new(ObrigationStartRequest)
-			if err := c.BodyParser(requestBody); err != nil {
-				c.SendStatus(400)
-				return
-			}
-			found := false
-			for _, obrigation := range obrigations {
-				if obrigation.Id == requestBody.Id {
-					obrigationPending = obrigation
-					found = true
-					break
+		haObrigations := haRoutes.Group("/obrigations")
+		{
+			haObrigations.Post("/request", func(c *fiber.Ctx) {
+				requestBody := new(ObrigationStartRequest)
+				if err := c.BodyParser(requestBody); err != nil {
+					c.SendStatus(400)
+					return
 				}
-			}
-			if !found {
-				log.Println("Obrigation not found")
-				c.SendStatus(400)
-				return
-			}
-			go func() {
-				notify := firebase.New(
-					requestBody.Device,
-					"SOME OBRIGATION AT ROUTINE NEEDS YOUR ATTENTION "+obrigationPending.Name,
-					"Tap this notification when you are ready to scan the QR CODE.")
-				notify.Send()
-			}()
-			log.Println("Obrigation pending set to", obrigationPending)
-			c.SendStatus(200)
-		})
+				found := false
+				for _, obrigation := range obrigations {
+					if obrigation.Id == requestBody.Id {
+						obrigationPending = &obrigation
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Println("Obrigation not found")
+					c.SendStatus(400)
+					return
+				}
+				go func() {
+					notify := firebase.New(
+						requestBody.Device,
+						"SOME OBRIGATION AT ROUTINE NEEDS YOUR ATTENTION "+obrigationPending.Name,
+						"Tap this notification when you are ready to scan the QR CODE.")
+					notify.Send()
+				}()
+				log.Println("Obrigation pending set to", obrigationPending)
+				c.SendStatus(200)
+			})
+
+			haObrigations.Get("/", func(c *fiber.Ctx) {
+				obrigations, err := obrigation.ReadObrigations()
+				if err != nil {
+					c.SendStatus(fiber.StatusNoContent)
+					return
+				}
+				c.JSON(obrigations)
+			})
+		}
+
 	}
 
 	//mobile routes
-	mobileRoutes := app.Group("/mobile")
+	mobileRoutes := app.Group("/mobile", middlewares.ApiKeyMiddleware())
 	{
-		mobileRoutes.Post("/obrigation/confirm", func(c *fiber.Ctx) {
-			requestBody := new(ObrigationQRCodeRequest)
-			if err := c.BodyParser(requestBody); err != nil {
-				c.SendStatus(400)
+		mobileRoutes.Get("/pending", func(c *fiber.Ctx) {
+			if obrigationPending != nil {
+				c.JSON(obrigationPending)
 				return
 			}
-			if obrigationPending.QrCode != requestBody.Value {
-				c.JSON(fiber.Map{
-					"message": "no any obrigations with this qr code",
-				})
-				return
-			}
-			queue := ObrigationQueuePending{
-				Value:  requestBody.Value,
-				Device: requestBody.Device,
-			}
-			log.Println("Added obrigation to queue")
-			go func() {
-				obrigationsQueue <- queue
-			}()
-			c.SendStatus(fiber.StatusOK)
+			c.SendStatus(fiber.StatusNoContent)
 		})
+
+		mobileObrigations := mobileRoutes.Group("/obrigation")
+		{
+			mobileObrigations.Post("/", func(c *fiber.Ctx) {
+				requestBody := new(ObrigationQRCodeRequest)
+				if err := c.BodyParser(requestBody); err != nil {
+					c.SendStatus(400)
+					return
+				}
+				if obrigationPending.QrCode != requestBody.Value {
+					c.JSON(fiber.Map{
+						"message": "no any obrigations with this qr code",
+					})
+					return
+				}
+				queue := ObrigationQueuePending{
+					Value:  requestBody.Value,
+					Device: requestBody.Device,
+				}
+				log.Println("Added obrigation to queue")
+				go func() {
+					obrigationsQueue <- queue
+				}()
+				c.SendStatus(fiber.StatusOK)
+			})
+		}
 	}
 	///GET THE QR CODES TO PRINT
 	app.Get("/qrcode", func(c *fiber.Ctx) {
