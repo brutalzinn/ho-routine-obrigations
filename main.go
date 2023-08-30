@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -29,6 +30,8 @@ type ObrigationQueuePending struct {
 	Device string `json:"firebase_token"`
 }
 
+var API_KEY = os.Getenv("API_KEY")
+
 func main() {
 	obrigation.Connect()
 	obrigations, err := obrigation.ReadObrigations()
@@ -39,8 +42,16 @@ func main() {
 	}
 	obrigationsQueue := make(chan ObrigationQueuePending)
 	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) {
+		apiKey := c.Get("x-api-key")
+		if apiKey != API_KEY {
+			c.SendStatus(fiber.StatusUnauthorized)
+			return
+		}
+		c.Next()
+	})
 	///HOME ASSISTANT
-	haRoutes := app.Group("/homeassistant")
+	haRoutes := app.Group("/ho")
 	{
 		haRoutes.Get("/", websocket.New(func(c *websocket.Conn) {
 			for {
@@ -129,13 +140,14 @@ func main() {
 				return
 			}
 			queue := ObrigationQueuePending{
-				Value: requestBody.Value,
+				Value:  requestBody.Value,
+				Device: requestBody.Device,
 			}
 			log.Println("Added obrigation to queue")
 			go func() {
 				obrigationsQueue <- queue
 			}()
-			c.SendStatus(200)
+			c.SendStatus(fiber.StatusOK)
 		})
 	}
 	///GET THE QR CODES TO PRINT
@@ -153,7 +165,7 @@ func main() {
 
 	app.Get("/healthcheck", func(c *fiber.Ctx) {
 		log.Println("This is just a healthcheck :)")
-		c.SendStatus(200)
+		c.SendStatus(fiber.StatusOK)
 	})
 
 	log.Fatal(app.Listen(":3030"))
