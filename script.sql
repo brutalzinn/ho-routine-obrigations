@@ -9,6 +9,15 @@ CREATE TABLE Obrigations (
   	PRIMARY KEY(id)
 )
 
+CREATE TABLE Devices (
+    `id` INT NOT NULL AUTO_INCREMENT, 
+    `name` varchar(100) NOT NULL,
+    `token_firebase` varchar(100) NOT NULL,
+	`create_at` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00',
+  	`update_at` TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  	PRIMARY KEY(id)
+)
+
 
 INSERT INTO test.Obrigations (name,mandatory,qr_code) values ("cozinha", true, "hora-do-almoco")
 INSERT INTO test.Obrigations (name,mandatory,qr_code) values ("sala", true, "hora-da-pausa")

@@ -1,16 +1,12 @@
 package obrigation
 
 import (
-	"database/sql"
 	"fmt"
-	"log"
-	"os"
 	"time"
 
+	database "github.com/brutalzinn/ho-routine-obrigations/db"
 	_ "github.com/go-sql-driver/mysql"
 )
-
-var db *sql.DB
 
 type Obrigation struct {
 	Id        string    `db:"id"`
@@ -21,23 +17,9 @@ type Obrigation struct {
 	UpdateAt  time.Time `db:"update_at"`
 }
 
-func Connect() error {
-	var err error
-	db, err = sql.Open("mysql", os.Getenv("DB_CONFIG"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	pingErr := db.Ping()
-	if pingErr != nil {
-		log.Fatal(pingErr)
-	}
-	fmt.Println("Connected!")
-	return err
-}
-
-func ReadObrigations() ([]Obrigation, error) {
+func GetObrigations() ([]Obrigation, error) {
 	var obrigations []Obrigation
-	rows, err := db.Query("SELECT id, name, mandatory, qr_code FROM Obrigations")
+	rows, err := database.Conn.Query("SELECT id, name, mandatory, qr_code FROM Obrigations")
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -51,5 +33,4 @@ func ReadObrigations() ([]Obrigation, error) {
 		obrigations = append(obrigations, obrigation)
 	}
 	return obrigations, err
-
 }
