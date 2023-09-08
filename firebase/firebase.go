@@ -20,9 +20,9 @@ type FCMNotificationData struct {
 	Body  string `json:"body"`
 }
 
-func New(device string, title string, message string) FCMNotification {
+func New(TokenFirebase string, title string, message string) FCMNotification {
 	return FCMNotification{
-		To: device,
+		To: TokenFirebase,
 		Notification: FCMNotificationData{
 			Title: title,
 			Body:  message,

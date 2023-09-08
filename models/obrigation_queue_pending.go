@@ -1,7 +1,10 @@
 package models
 
 type ObrigationQueuePending struct {
-	Id     string
-	Value  string
-	Device string
+	Id            string
+	QrCodeValue   string
+	IdObrigation  int
+	IdDevice      int
+	DeviceName    string
+	TokenFirebase string
 }

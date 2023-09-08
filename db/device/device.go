@@ -8,7 +8,7 @@ import (
 )
 
 type Device struct {
-	Id            string    `db:"id"`
+	Id            int       `db:"id"`
 	Name          string    `db:"name"`
 	TokenFirebase string    `db:"token_firebase"`
 	CreateAt      time.Time `db:"create_at"`
@@ -35,7 +35,7 @@ func GetDevices() ([]Device, error) {
 
 func GetDevice(name string) (Device, error) {
 	var device Device
-	rows, err := database.Conn.Query("SELECT id, name, token_firebase FROM devices where name = ?", name)
+	rows, err := database.Conn.Query("SELECT id, name, token_firebase FROM Devices where name = ?", name)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -48,4 +48,16 @@ func GetDevice(name string) (Device, error) {
 		return device, err
 	}
 	return device, err
+}
+
+func InsertDevice(device Device) (bool, error) {
+	rows, err := database.Conn.Exec("INSERT INTO Devices (name, token_firebase) VALUES (?,?)", device.Name, device.TokenFirebase)
+	if err != nil {
+		fmt.Print(err)
+	}
+	changes, err := rows.RowsAffected()
+	if changes == 0 {
+		return false, err
+	}
+	return true, err
 }

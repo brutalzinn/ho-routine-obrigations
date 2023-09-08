@@ -28,3 +28,10 @@ Now its 23:15 and this simple service with Golang that can receive a Home Assist
 I will put some qr codes at kitchen, my room and at restroom. At some time, the home assistant will try to alert me to go to these points. I called these points like "obrigations".
 
 OK. OK ITS HARD TO SOLVE THIS KIND OF PROBLEM. But.. at this time, i cant handle any breaks. I am very, very, very health critical situation.
+
+# CHANGE LOG
+
+- MQTT OR WEB SOCKET to connection with HO? YES. We dont need mqtt here. Its not just a IoT plataform.
+Its overthink project when i suppose to do other things.
+
+

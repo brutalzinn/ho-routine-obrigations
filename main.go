@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	database "github.com/brutalzinn/ho-routine-obrigations/db"
+	"github.com/brutalzinn/ho-routine-obrigations/db/obrigation"
 	"github.com/brutalzinn/ho-routine-obrigations/middlewares"
-	"github.com/brutalzinn/ho-routine-obrigations/obrigation"
 	"github.com/brutalzinn/ho-routine-obrigations/routes/homeassistant"
 	"github.com/brutalzinn/ho-routine-obrigations/routes/mobile"
 	"github.com/brutalzinn/ho-routine-obrigations/util"
@@ -36,10 +36,11 @@ func main() {
 	//mobile routes
 	mobileRoutes := app.Group("/mobile", middlewares.ApiKeyMiddleware())
 	{
+		mobileRoutes.Post("/register", mobile.InsertDevice)
 		mobileObrigations := mobileRoutes.Group("/obrigation")
 		{
 			mobileObrigations.Post("/confirm", mobile.ConfirmObrigation)
-			mobileObrigations.Get("/", mobile.GetObrigation)
+			mobileObrigations.Get("/", mobile.GetPendingObrigation)
 		}
 	}
 

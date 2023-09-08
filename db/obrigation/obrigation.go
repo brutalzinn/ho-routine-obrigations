@@ -9,7 +9,7 @@ import (
 )
 
 type Obrigation struct {
-	Id        string    `db:"id"`
+	Id        int       `db:"id"`
 	Name      string    `db:"name"`
 	QrCode    string    `db:"qr_code"`
 	Mandatory bool      `db:"mandatory"`
@@ -33,4 +33,21 @@ func GetObrigations() ([]Obrigation, error) {
 		obrigations = append(obrigations, obrigation)
 	}
 	return obrigations, err
+}
+
+func GetObrigation(IdObrigation int) (Obrigation, error) {
+	var obrigation Obrigation
+	rows, err := database.Conn.Query("SELECT id, name, mandatory, qr_code FROM Obrigations where id = ?", IdObrigation)
+	if err != nil {
+		fmt.Print(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Scan(&obrigation.Id, &obrigation.Name, &obrigation.Mandatory, &obrigation.QrCode)
+		if err != nil {
+			panic(err)
+		}
+		return obrigation, err
+	}
+	return obrigation, err
 }
